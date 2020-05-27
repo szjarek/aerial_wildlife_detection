@@ -57,6 +57,7 @@ COPY . .
 RUN bash /home/${USERNAME}/app/setupScripts/setup-keepalive.sh
 
 # Set to proper settings file
+ENV PYTHONPATH=/home/${USERNAME}/app
 ENV AIDE_CONFIG_PATH=/home/$USERNAME/app/config/settings.ini
 ENV LOC_REGION=Europe
 ENV LOC_TIMEZONE=London
@@ -64,7 +65,7 @@ ENV LOC_TIMEZONE=London
 # permanently (requires re-login):
 # echo "export AIDE_CONFIG_PATH=path/to/settings.ini" | tee ~/.profile
 
-# ONLY DB SERVER 
+# ============================ DB SERVER ONLY BEGINS ======================================
 # Setup PostreSQL database
 RUN ln -fs /usr/share/zoneinfo/$LOC_REGION/$LOC_TIMEZONE /etc/localtime \
  && dbName=$(python util/configDef.py --section=Database --parameter=name) \
@@ -90,9 +91,52 @@ RUN ln -fs /usr/share/zoneinfo/$LOC_REGION/$LOC_TIMEZONE /etc/localtime \
  && sudo -u postgres psql -c "GRANT CONNECT ON DATABASE $dbName TO $dbUser;" \
  && sudo -u postgres psql -d $dbName -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" \
 # NOTE: needs to be run after init
- && sudo -u postgres psql -d $dbName -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $dbUser;" 
-# Creating DB schema 
-# && python projectCreation/setupDB.py
+ && sudo -u postgres psql -d $dbName -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $dbUser;" \
+# Create DB schema
+ && python projectCreation/setupDB.py
+# ============================ DB SERVER ONLY ENDS ======================================
 
-# Temporary entry point to prevent container from stopping if no command is privided
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+# ============================ AI BACKEND BEGINS ========================================
+# define RabbitMQ access credentials. NOTE: replace defaults with your own values
+RUN RMQ_username=aide \
+ && RMQ_password=password \
+# replace with your port
+# && RMQ_port=5672 \
+# install RabbitMQ server
+ && sudo apt-get update && sudo apt-get install -y rabbitmq-server \
+# start RabbitMQ server
+ && sudo systemctl enable rabbitmq-server.service \
+ && sudo service rabbitmq-server start \
+# add the user we defined above
+ && sudo rabbitmqctl add_user $RMQ_username $RMQ_password \
+# add new virtual host
+ && sudo rabbitmqctl add_vhost aide_vhost \
+# set permissions
+ && sudo rabbitmqctl set_permissions -p aide_vhost $RMQ_username ".*" ".*" ".*" \
+# restart
+# may take a minute; if the command hangs: sudo pkill -KILL -u rabbitmq
+ && sudo service rabbitmq-server stop \
+ && sudo service rabbitmq-server start
+
+RUN sudo apt-get update && sudo apt-get -y install redis-server \
+# make sure Redis stores its messages in an accessible folder (we're using /var/lib/redis/aide.rdb here)
+ && sudo sed -i "s/^\s*dir\s*.*/dir \/var\/lib\/redis/g" /etc/redis/redis.conf \
+ && sudo sed -i "s/^\s*dbfilename\s*.*/dbfilename aide.rdb/g" /etc/redis/redis.conf \
+
+# also tell systemd
+ && sudo mkdir -p /etc/systemd/system/redis.service.d \
+ && echo -e "[Service]\nReadWriteDirectories=-/var/lib/redis" | sudo tee -a /etc/systemd/system/redis.service.d/override.conf > /dev/null \
+ && sudo mkdir -p /var/lib/redis \
+ && sudo chown -R redis:redis /var/lib/redis \
+# disable persistence. In general, we don't need Redis to save snapshots as it is only used as a result
+# (and therefore message) backend.
+ && sudo sed -i "s/^\s*save/# save /g" /etc/redis/redis.conf \
+# restart
+ && sudo /etc/init.d/redis-server restart
+# && sudo systemctl restart redis-server.service
+
+# ============================ AI BACKEND ENDS ==========================================
+#
+
+# Temporary command to prevent container from stopping if no command is privided
+CMD ["tail", "-f", "/dev/null"]

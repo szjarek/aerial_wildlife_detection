@@ -4,11 +4,21 @@ volumes:
     name: postgres_db
 #    external: true
 services:
-  aide: 
+#  aide_db: 
+#    build:
+#      context:  '..'
+#      dockerfile: 'deployment/db/Dockerfile'
+#    image: 'aide_db'
+#    volumes:
+#      - postgres_db:/var/lib/postgresql/10/main
+#    ports:
+#      - '17685:17685'
+
+  aide_app: 
     build:
       context:  '.'
       dockerfile: 'Dockerfile'
-    image: 'aide'
+    image: 'aide_app'
     volumes:
       - postgres_db:/var/lib/postgresql/10/main
     ports:
