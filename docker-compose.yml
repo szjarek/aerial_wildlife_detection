@@ -1,0 +1,19 @@
+version: '3.7'
+volumes:
+  postgres_db:
+    name: postgres_db
+#    external: true
+services:
+  aide: 
+    build:
+      context:  '.'
+      dockerfile: 'Dockerfile'
+    image: 'aide'
+    volumes:
+      - postgres_db:/var/lib/postgresql/10/main
+    ports:
+      - '8080:8080'
+
+# Overrides default command so things don't shut down after the process ends.
+    #command: gunicorn --workers=4 --bind 0.0.0.0:9000 --log-level=debug --error-logfile=- --access-logfile=- --timeout 60 --preload app:APP
+    #command: flask run --host 0.0.0.0 --port 9000
