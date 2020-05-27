@@ -9,8 +9,8 @@ Pillow>=2.2.1
 numpy>=1.16.4
 
 # for the AI backend:
-celery[librabbitmq,redis,auth,msgpack]>=4.3.0  #TODO
+# celery[librabbitmq,redis,auth,msgpack]>=4.3.0  #TODO
 
-# for built-in models (NOTE: we don't need it for Docker, as it is handled by the source image):
+# for built-in models (NOTE: we don't need it for Docker, as it is handled by the source):
 # pytorch>=1.1.0
 # torchvision>=0.3.0

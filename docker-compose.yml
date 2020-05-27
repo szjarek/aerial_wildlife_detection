@@ -14,7 +14,8 @@ services:
 #    ports:
 #      - '17685:17685'
 
-  aide_app: 
+  aide_app:
+    hostname: 'aide_app_host' 
     build:
       context:  '.'
       dockerfile: 'Dockerfile'

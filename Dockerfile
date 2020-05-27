@@ -44,7 +44,8 @@ WORKDIR /home/$USERNAME/app
 # create environment (requires conda or miniconda) - on the second thought, I don't need environment for docker image
 # RUN conda create -y -n aide python=3.7
 COPY requirements.txt requirements.txt
-RUN conda install --file requirements.txt --channel defaults --channel conda-forge 
+RUN conda install python=3.6.9 --file requirements.txt --channel defaults --channel conda-forge \
+ && pip install celery[librabbitmq,redis,auth,msgpack]>=4.3.0
 
 # download AIde source code (from local repository)
 COPY . .
@@ -98,31 +99,25 @@ RUN ln -fs /usr/share/zoneinfo/$LOC_REGION/$LOC_TIMEZONE /etc/localtime \
 
 # ============================ AI BACKEND BEGINS ========================================
 # define RabbitMQ access credentials. NOTE: replace defaults with your own values
-RUN RMQ_username=aide \
- && RMQ_password=password \
-# replace with your port
-# && RMQ_port=5672 \
-# install RabbitMQ server
- && sudo apt-get update && sudo apt-get install -y rabbitmq-server \
+RUN sudo apt-get update && sudo apt-get install -y rabbitmq-server \
 # start RabbitMQ server
- && sudo systemctl enable rabbitmq-server.service \
- && sudo service rabbitmq-server start \
+ && sudo systemctl enable rabbitmq-server.service
+# && sudo service rabbitmq-server start \
 # add the user we defined above
- && sudo rabbitmqctl add_user $RMQ_username $RMQ_password \
+# && sudo rabbitmqctl add_user $RMQ_username $RMQ_password \
 # add new virtual host
- && sudo rabbitmqctl add_vhost aide_vhost \
+# && sudo rabbitmqctl add_vhost aide_vhost \
 # set permissions
- && sudo rabbitmqctl set_permissions -p aide_vhost $RMQ_username ".*" ".*" ".*" \
+# && sudo rabbitmqctl set_permissions -p aide_vhost $RMQ_username ".*" ".*" ".*" 
 # restart
 # may take a minute; if the command hangs: sudo pkill -KILL -u rabbitmq
- && sudo service rabbitmq-server stop \
- && sudo service rabbitmq-server start
+# && sudo service rabbitmq-server stop \
+# && sudo service rabbitmq-server start
 
 RUN sudo apt-get update && sudo apt-get -y install redis-server \
 # make sure Redis stores its messages in an accessible folder (we're using /var/lib/redis/aide.rdb here)
  && sudo sed -i "s/^\s*dir\s*.*/dir \/var\/lib\/redis/g" /etc/redis/redis.conf \
  && sudo sed -i "s/^\s*dbfilename\s*.*/dbfilename aide.rdb/g" /etc/redis/redis.conf \
-
 # also tell systemd
  && sudo mkdir -p /etc/systemd/system/redis.service.d \
  && echo -e "[Service]\nReadWriteDirectories=-/var/lib/redis" | sudo tee -a /etc/systemd/system/redis.service.d/override.conf > /dev/null \
@@ -131,12 +126,32 @@ RUN sudo apt-get update && sudo apt-get -y install redis-server \
 # disable persistence. In general, we don't need Redis to save snapshots as it is only used as a result
 # (and therefore message) backend.
  && sudo sed -i "s/^\s*save/# save /g" /etc/redis/redis.conf \
+# optional: if the port is anything else than 6379, execute the following line:
+# replace with your port
+ && port=6379 \
+ && sudo sed -i "s/^\s*port\s*.*/port $port/g" /etc/redis/redis.conf \
+# ensure only ipv4 is bound (to work properly on Docker without changing it's configuration)
+ && sudo sed -i "s/^\s*bind\s*.*/bind 127.0.0.1/g" /etc/redis/redis.conf 
 # restart
- && sudo /etc/init.d/redis-server restart
-# && sudo systemctl restart redis-server.service
+# && sudo service redis-server restart
 
 # ============================ AI BACKEND ENDS ==========================================
 #
 
-# Temporary command to prevent container from stopping if no command is privided
-CMD ["tail", "-f", "/dev/null"]
+CMD sudo service postgresql start \
+    && sudo service rabbitmq-server start \
+    && sudo service redis-server start \ 
+    # I need to set rabitmq user and permissions here, as it takes hostname (dynamic) during build of previous phases as part of config folder :-()
+    && RMQ_username=aide \
+    && RMQ_password=password \
+    && sudo service rabbitmq-server start \
+    # add the user we defined above
+    && sudo rabbitmqctl add_user $RMQ_username $RMQ_password \
+    # add new virtual host
+    && sudo rabbitmqctl add_vhost aide_vhost \
+    # set permissions
+    && sudo rabbitmqctl set_permissions -p aide_vhost $RMQ_username ".*" ".*" ".*" \
+    # Temporary command to prevent container from stopping if no command is privided
+    && tail -f /dev/null
+
+#["sudo", "service", "rabbitmq-server", "start", "&", "sudo", "service", "redis-server", "start", "&", "tail", "-f", "/dev/null"]
