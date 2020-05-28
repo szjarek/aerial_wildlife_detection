@@ -1,0 +1,3 @@
+SELECT 'group' AS type, id, NULL as idx, name, color, parent, NULL AS keystroke FROM aerialtest.labelclassgroup
+UNION ALL
+SELECT 'class' AS type, id, idx, name, color, labelclassgroup, keystroke FROM aerialtest.labelclass;

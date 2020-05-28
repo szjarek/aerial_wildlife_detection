@@ -16,7 +16,9 @@ services:
       - aide_db_data:/var/lib/postgresql/10/main
       - aide_files:/home/aide/files
       - .:/home/aide/app:cached
-      - /srv/daera_sheep/predictions/crops/valid_ort16_odapi:/home/aide/images 
+      # - /srv/daera_sheep/predictions/crops/valid_ort16_odapi:/home/aide/images 
+      - /Users/jarek/_Documents.Private/Objectivity/src/rspb/data/images:/home/aide/images
+      - /Users/jarek/_Documents.Private/Objectivity/src/rspb/data/labels:/home/aide/labels
     ports:
       - '8080:8080'
 
