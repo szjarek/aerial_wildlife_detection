@@ -1,3 +1,7 @@
+#!/bin/bash
+
+source /home/aide/app/container_setup.sh
+
 # If AIde is run on MS Azure: TCP connections are dropped after 4 minutes of inactivity
 # (see https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-outbound-connections#idletimeout)
 # This is fatal for our database connection system, which keeps connections open.
@@ -12,3 +16,8 @@ else
     sed -i "s/^\s*net.ipv4.tcp_keepalive_probes.*/net.ipv4.tcp_keepalive_probes = 20 /g" /etc/sysctl.conf
 fi
 sysctl -p
+
+sudo service postgresql start \
+&& sudo service rabbitmq-server start \
+&& sudo service redis-server start 
+

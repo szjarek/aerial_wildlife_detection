@@ -1,8 +1,10 @@
 version: '3.7'
 volumes:
-  postgres_db:
-    name: postgres_db
+  aide_db:
+    name: aide_db
 #    external: true
+  aide_files:
+    name: aide_files
 services:
 #  aide_db: 
 #    build:
@@ -21,7 +23,9 @@ services:
       dockerfile: 'Dockerfile'
     image: 'aide_app'
     volumes:
-      - postgres_db:/var/lib/postgresql/10/main
+      - aide_db:/var/lib/postgresql/10/main
+      - aide_files:/home/aide/files
+      - .:/home/aide/app:cached 
     ports:
       - '8080:8080'
 
