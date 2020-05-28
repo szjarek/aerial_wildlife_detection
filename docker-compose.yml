@@ -1,21 +1,11 @@
 version: '3.7'
 volumes:
-  aide_db:
-    name: aide_db
+  aide_db_data:
+    name: aide_db_data
 #    external: true
   aide_files:
     name: aide_files
 services:
-#  aide_db: 
-#    build:
-#      context:  '..'
-#      dockerfile: 'deployment/db/Dockerfile'
-#    image: 'aide_db'
-#    volumes:
-#      - postgres_db:/var/lib/postgresql/10/main
-#    ports:
-#      - '17685:17685'
-
   aide_app:
     hostname: 'aide_app_host' 
     build:
@@ -23,9 +13,10 @@ services:
       dockerfile: 'Dockerfile'
     image: 'aide_app'
     volumes:
-      - aide_db:/var/lib/postgresql/10/main
+      - aide_db_data:/var/lib/postgresql/10/main
       - aide_files:/home/aide/files
-      - .:/home/aide/app:cached 
+      - .:/home/aide/app:cached
+      - /srv/daera_sheep/predictions/crops/valid_ort16_odapi:/home/aide/images 
     ports:
       - '8080:8080'
 

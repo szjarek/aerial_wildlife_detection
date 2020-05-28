@@ -44,6 +44,7 @@ WORKDIR /home/$USERNAME/app
 # create environment (requires conda or miniconda) - on the second thought, I don't need environment for docker image
 # RUN conda create -y -n aide python=3.7
 COPY requirements.txt requirements.txt
+
 RUN conda install python=3.6.9 --file requirements.txt --channel defaults --channel conda-forge \
  && pip install celery[librabbitmq,redis,auth,msgpack]>=4.3.0
 
@@ -64,7 +65,15 @@ RUN ln -fs /usr/share/zoneinfo/$LOC_REGION/$LOC_TIMEZONE /etc/localtime \
 # install packages
  && echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list \
  && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - \
- && apt-get update && sudo apt-get install -y postgresql-$version
+ && apt-get update && sudo apt-get install -y postgresql-$version \
+# update the postgres configuration with the correct port (NOTE: IT NEEDS TO MATCH THE settings.ini configuration !!!)
+ && sudo sed -i "s/\s*port\s*=\s[0-9]*/port = 17685/g" /etc/postgresql/$version/main/postgresql.conf \
+# modify authentication
+# NOTE: you might want to manually adapt these commands for increased security; the following makes postgres listen to all global connections
+ && sudo sed -i "s/\s*#\s*listen_addresses\s=\s'localhost'/listen_addresses = '\*'/g" /etc/postgresql/$version/main/postgresql.conf \
+ && echo "host    all             all             0.0.0.0/0               md5" | sudo tee -a /etc/postgresql/$version/main/pg_hba.conf > /dev/null \
+ && sudo systemctl enable postgresql
+
 # ============================ DB SERVER ONLY ENDS ======================================
 
 # ============================ AI BACKEND BEGINS ========================================
@@ -98,5 +107,6 @@ COPY . .
 RUN chmod a+rwx container_setup.sh && chmod a+rwx container_start.sh
 
 CMD bash /home/aide/app/container_start.sh \
+ && bash /home/aide/app/launch_all.sh
     # Temporary command to prevent container from stopping if no command is privided
-    && tail -f /dev/null
+    # && tail -f /dev/null

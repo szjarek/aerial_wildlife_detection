@@ -10,7 +10,6 @@ export AIDE_MODULES=LabelUI,AIController,FileServer
 # migrate AIDE (just in case)
 python projectCreation/migrate_aide.py
 
-
 # get host and port from configuration file
 host=$(python util/configDef.py --section=Server --parameter=host)
 port=$(python util/configDef.py --section=Server --parameter=port)

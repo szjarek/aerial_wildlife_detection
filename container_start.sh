@@ -17,7 +17,8 @@ else
 fi
 sysctl -p
 
-sudo service postgresql start \
-&& sudo service rabbitmq-server start \
-&& sudo service redis-server start 
+sudo systemctl enable postgresql
+sudo service postgresql start
+sudo service rabbitmq-server start
+sudo service redis-server start 
 

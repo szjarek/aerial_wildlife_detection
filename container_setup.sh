@@ -11,17 +11,7 @@ else
     dbName=$(python util/configDef.py --section=Database --parameter=name)
     dbUser=$(python util/configDef.py --section=Database --parameter=user)
     dbPassword=$(python util/configDef.py --section=Database --parameter=password)
-    dbPort=$(python util/configDef.py --section=Database --parameter=port)
-# specify postgres version you wish to use (must be >= 9.5)
-    version=10
-# update the postgres configuration with the correct port
-    sudo sed -i "s/\s*port\s*=\s[0-9]*/port = $dbPort/g" /etc/postgresql/$version/main/postgresql.conf 
-# modify authentication
-# NOTE: you might want to manually adapt these commands for increased security; the following makes postgres listen to all global connections
-    sudo sed -i "s/\s*#\s*listen_addresses\s=\s'localhost'/listen_addresses = '\*'/g" /etc/postgresql/$version/main/postgresql.conf
-    echo "host    all             all             0.0.0.0/0               md5" | sudo tee -a /etc/postgresql/$version/main/pg_hba.conf > /dev/null
     sudo service postgresql restart
-    sudo systemctl enable postgresql
     sudo -u postgres psql -c "CREATE USER $dbUser WITH PASSWORD '$dbPassword';"
     sudo -u postgres psql -c "CREATE DATABASE $dbName WITH OWNER $dbUser CONNECTION LIMIT -1;"
     sudo -u postgres psql -c "GRANT CONNECT ON DATABASE $dbName TO $dbUser;"
