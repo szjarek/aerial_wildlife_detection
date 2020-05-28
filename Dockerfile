@@ -48,17 +48,10 @@ COPY requirements.txt requirements.txt
 RUN conda install python=3.6.9 --file requirements.txt --channel defaults --channel conda-forge \
  && pip install celery[librabbitmq,redis,auth,msgpack]>=4.3.0
 
-# Set to proper settings file
-ENV PYTHONPATH=/home/${USERNAME}/app
-ENV AIDE_CONFIG_PATH=/home/$USERNAME/app/config/settings.ini
-ENV LOC_REGION=Europe
-ENV LOC_TIMEZONE=London
-
-# permanently (requires re-login):
-# echo "export AIDE_CONFIG_PATH=path/to/settings.ini" | tee ~/.profile
-
 # ============================ DB SERVER ONLY BEGINS ======================================
 # Setup PostreSQL database
+ENV LOC_REGION=Europe
+ENV LOC_TIMEZONE=London
 RUN ln -fs /usr/share/zoneinfo/$LOC_REGION/$LOC_TIMEZONE /etc/localtime \
 # specify postgres version you wish to use (must be >= 9.5)
  && version=10 \
@@ -100,6 +93,13 @@ RUN sudo apt-get update && sudo apt-get -y install redis-server \
 # ensure only ipv4 is bound (to work properly on Docker without changing it's configuration)
  && sudo sed -i "s/^\s*bind\s*.*/bind 127.0.0.1/g" /etc/redis/redis.conf 
 # ============================ AI BACKEND ENDS ==========================================
+
+# Set to proper settings file
+ENV PYTHONPATH=/home/${USERNAME}/app
+ENV AIDE_CONFIG_PATH=/home/$USERNAME/app/config/settings_docker.ini
+
+# permanently (requires re-login):
+# echo "export AIDE_CONFIG_PATH=path/to/settings.ini" | tee ~/.profile
 
 # download AIde source code (from local repository)
 COPY . .
